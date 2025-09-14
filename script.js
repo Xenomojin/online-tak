@@ -76,7 +76,7 @@ class Player {
       team_${this.color}.use_time(time.time() - before)
 
       if team_${this.color}.get_lives() <= 0 or team_${this.color}.get_time() <= 0:
-          endException = GameEndException(losing_team=team_${this.color}, winning_team=team_${this.color_opponent}, draw=False)
+          endException = GameEndException(losing_team=team_${this.color}, winning_team=team_${this.color_opponent})
       elif action is not None:
           try:
               tak_controller.next_move(team_${this.color}, action)
@@ -119,8 +119,16 @@ class Player {
 }
 
 function endGame(endException) {
+  let winnerColor;
+  if (endException.winning_team != undefined) {
+    winnerColor = endException.winning_team.get_color();
+  }
+  let loserColor;
+  if (endException.losing_team != undefined) {
+    loserColor = endException.losing_team.get_color();
+  }
   console.log(
-    `game ended (winner: ${endException.winning_team.toString()}, looser: ${endException.losing_team.toString()}, draw: ${endException.draw})`,
+    `game ended (winner: ${winnerColor}, looser: ${loserColor}, draw: ${endException.draw})`,
   );
   endException.destroy();
   gameState = "finished";
@@ -151,6 +159,7 @@ function dragOverHandler(event) {
 function onkeydownHandler(event) {
   if (event.key === " " && player_white.globals && player_black.globals) {
     if (gameState === "ready") {
+      console.log("start bots");
       player_black.start();
       player_white.start();
       gameState = "playing";
@@ -160,6 +169,10 @@ function onkeydownHandler(event) {
       } else {
         player_black.step();
       }
+
+      pieces = JSON.parse(
+        pyodide.runPython(`tak_controller.tak.board.pieces_json()`),
+      );
     }
   } else if (event.key === "r") {
     reset();
@@ -168,6 +181,8 @@ function onkeydownHandler(event) {
 }
 
 function reset(board_size = 5, lives = 3, time = 120) {
+  pieces = [];
+  globalThis.board_size = board_size;
   pyodide.runPython(`
     team_white = Team("white", ${board_size}, ${lives}, ${time})
     team_black = Team("black", ${board_size}, ${lives}, ${time})
@@ -186,6 +201,9 @@ let player_white;
 let white_next;
 
 let pyodide;
+
+let pieces = [];
+let board_size = 5;
 
 // loading, ready, playing, finished
 let gameState = "loading";
@@ -216,13 +234,84 @@ function setup() {
 
   let canvas = document.getElementById("canvas");
   createCanvas(700, 700, WEBGL, canvas);
-  // angleMode(DEGREES);
+  angleMode(DEGREES);
 }
 
 function draw() {
-  background(240);
+  const TILE_WIDTH = 80;
+  const STONE_WIDTH = 70;
+  const STONE_HEIGHT = 20;
+  const CAPSTONE_RADIUS = 25;
+
+  background("#D4FFF7");
 
   orbitControl();
 
-  box();
+  translate(
+    -((board_size - 1) * TILE_WIDTH) / 2,
+    0,
+    -((board_size - 1) * TILE_WIDTH) / 2,
+  );
+
+  push();
+  fill("#E6C453");
+  stroke("#67520F");
+  for (let i = 0; i < board_size; i++) {
+    for (let j = 0; j < board_size; j++) {
+      push();
+      translate(i * TILE_WIDTH, 50, j * TILE_WIDTH);
+      box(TILE_WIDTH, 100, TILE_WIDTH);
+      pop();
+    }
+  }
+  pop();
+
+  for (const piece of pieces) {
+    push();
+    if (piece.kind == "stone") {
+      translate(
+        piece.pos[0] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_HEIGHT / 2),
+        piece.pos[1] * TILE_WIDTH,
+      );
+      if (piece.color == "black") {
+        fill("black");
+        stroke("white");
+      } else {
+        fill("white");
+        stroke("black");
+      }
+      box(STONE_WIDTH, STONE_HEIGHT, STONE_WIDTH);
+    } else if (piece.kind == "wall") {
+      translate(
+        piece.pos[0] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
+        piece.pos[1] * TILE_WIDTH,
+      );
+      if (piece.color == "black") {
+        fill("black");
+        stroke("white");
+      } else {
+        fill("white");
+        stroke("black");
+      }
+      rotateY(45);
+      box(STONE_WIDTH, STONE_WIDTH, STONE_HEIGHT);
+    } else {
+      translate(
+        piece.pos[0] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
+        piece.pos[1] * TILE_WIDTH,
+      );
+      if (piece.color == "black") {
+        fill("black");
+        stroke("black");
+      } else {
+        fill("white");
+        stroke("white");
+      }
+      cylinder(CAPSTONE_RADIUS, STONE_WIDTH);
+    }
+    pop();
+  }
 }

@@ -17,9 +17,6 @@ class Team:
         self.__lives = lives
         self.__time = time
 
-    def __str__(self):
-        return self.get_color()
-
     def get_color(self):
         return self.__color
 

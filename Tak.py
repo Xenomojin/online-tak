@@ -1,4 +1,5 @@
 from Team import Team
+import json
 
 class GameEndException(Exception):
     def __init__(self, losing_team=None, winning_team=None, draw=None):
@@ -74,6 +75,15 @@ class Board:
 
     def board_size(self):
         return self.__board_size
+
+    def pieces_json(self):
+        pieces = []
+        for i in range(self.board_size()):
+            for j in range(self.board_size()):
+                stack = self.__board[i][j]
+                for k in range(len(stack)):
+                    pieces.append({ "pos": [i,j,k], "color": stack[k].team.get_color(), "kind": stack[k].kind })
+        return json.dumps(pieces)
 
 class Tak:
     def __init__(self, board_size, team_white, team_black):
