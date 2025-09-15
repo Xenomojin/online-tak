@@ -192,8 +192,8 @@ class GameEndException {
 
 class GameController {
   constructor() {
-    document.getElementById("drop_zone_black").innerText = "";
-    document.getElementById("drop_zone_white").innerText = "";
+    document.getElementById("drop_zone_black").innerHTML = "<em>drop zone</em>";
+    document.getElementById("drop_zone_white").innerHTML = "<em>drop zone</em>";
 
     this.playerBlack = new Player("black");
     this.playerWhite = new Player("white");
@@ -220,6 +220,8 @@ class GameController {
 
     this.playerBlack.start();
     this.playerWhite.start();
+    this.playerBlack.updateClockDisplay();
+    this.playerWhite.updateClockDisplay();
   }
 
   step() {

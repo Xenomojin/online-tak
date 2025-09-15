@@ -45,6 +45,7 @@ h1 {
 #drop_zone_white {
     width: 225px;
     height: 25px;
+    line-height: 25px;
     padding: 3px;
     user-select: none;
     background-color: var(--primary-color);
