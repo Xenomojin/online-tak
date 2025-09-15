@@ -1,27 +1,40 @@
-def start(team, team_opponent):
+from random import random
+
+def start(my_team, enemy_team):
     print("start")
 
-    print("--- my team ---")
-    print("stones: ", team.get_stones())
-    print("capstones: ", team.get_capstone())
-    print("time: ", team.get_time())
-    print("lives: ", team.get_lives())
+    print(f"--- my team ({my_team.get_color()}) ---")
+    print("stones: ", my_team.get_stones())
+    print("capstones: ", my_team.get_capstone())
+    print("time: ", my_team.get_time())
+    print("lives: ", my_team.get_lives())
 
-    print("--- opponent team ---")
-    print("stones: ", team_opponent.get_stones())
-    print("capstones: ", team_opponent.get_capstone())
-    print("time: ", team_opponent.get_time())
-    print("lives: ", team_opponent.get_lives())
+    print(f"--- enemy team ({enemy_team.get_color()}) ---")
+    print("stones: ", enemy_team.get_stones())
+    print("capstones: ", enemy_team.get_capstone())
+    print("time: ", enemy_team.get_time())
+    print("lives: ", enemy_team.get_lives())
+
+    print()
 
 def step(board):
     print("step")
 
     print("board size:", board.board_size())
 
-    for i in range(0, board.board_size()):
-        for j in range(0, board.board_size()):
-            print(f"board[{i},{j}]: {board[i,j]}")
+    move = None
+    for i in range(board.board_size()):
+        for j in range(board.board_size()):
+            if not board[i, j]:
+                if random() > 0.3:
+                    move = f"PS;({i},{j})"
+                else:
+                    move = f"PW;({i},{j})"
 
-    for i in range(0, 100000):
-        if i % 10000 == 0:
-            print(i)
+    if move is None:
+        print("found no empty tile :(")
+    else:
+        print("move: ", move)
+
+    print()
+    return move
