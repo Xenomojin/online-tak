@@ -2,9 +2,9 @@ class Player {
   constructor(color) {
     this.color = color;
     if (color == "white") {
-      this.color_opponent = "black";
+      this.colorOpponent = "black";
     } else {
-      this.color_opponent = "white";
+      this.colorOpponent = "white";
     }
     this.clockDisplay = document.getElementById("clock_" + color);
     this.outputConsole = document.getElementById("script_output_" + color);
@@ -12,7 +12,10 @@ class Player {
   }
 
   loadScript(file) {
-    this.globals = undefined;
+    if (this.globals != undefined) {
+      this.globals.destroy();
+      this.globals = undefined;
+    }
     this.dropZone.innerText = "";
 
     const reader = new FileReader();
@@ -20,6 +23,7 @@ class Player {
       this.dropZone.innerText = file.name;
       this.globals = pyodide.globals.get("dict")();
       pyodide.runPython(event.target.result, { globals: this.globals });
+      this.start();
     };
     console.log(`loading script "${file.name}" for ${this.color}`);
     reader.readAsText(file);
@@ -30,11 +34,19 @@ class Player {
       batched: (message) => (this.outputConsole.innerHTML += message + "<br>"),
     });
     pyodide.setStderr({
-      batched: (message) => (this.outputConsole.innerText += message + "<br>"),
+      batched: (message) =>
+        (this.outputConsole.innerHTML +=
+          '<span class="error">' + message + "</span><br>"),
     });
   }
 
   start() {
+    if (this.globals == undefined) {
+      console.log(`can't run start: ${this.color} has no script attached`);
+      return;
+    }
+    console.log(`start ${this.color} bot`);
+
     this.captureOutput();
     pyodide.runPython(
       `
@@ -43,7 +55,7 @@ class Player {
         before = time.time()
 
         try:
-            start(team_${this.color}, team_${this.color_opponent})
+            start(team_${this.color}, team_${this.colorOpponent})
         except Exception as err:
             print(str(err))
 
@@ -51,17 +63,21 @@ class Player {
       `,
       { globals: this.globals, locals: pyodide.globals },
     );
+
     this.updateClockDisplay();
   }
 
   step() {
-    this.captureOutput();
-    const lives_before = pyodide.runPython(`team_${this.color}.get_lives()`);
-    const endException = pyodide.runPython(
-      `
-      import time
+    if (this.globals == undefined) {
+      console.log(`can't run step: ${this.color} has no script attached`);
+      return;
+    }
 
-      endException = None
+    this.captureOutput();
+    const livesBefore = pyodide.runPython(`team_${this.color}.get_lives()`);
+    const exceptionProxy = pyodide.runPython(
+      `
+      gameEndException = None
       before = time.time()
 
       action = None
@@ -70,36 +86,43 @@ class Player {
           if action is None:
             raise ValueError
       except Exception as err:
-          print(str(err))
+          traceback.print_exception(err)
           team_${this.color}.use_lives()
 
       team_${this.color}.use_time(time.time() - before)
 
       if team_${this.color}.get_lives() <= 0 or team_${this.color}.get_time() <= 0:
-          endException = GameEndException(losing_team=team_${this.color}, winning_team=team_${this.color_opponent})
+          gameEndException = GameEndException(losing_team=team_${this.color}, winning_team=team_${this.colorOpponent})
       elif action is not None:
           try:
               tak_controller.next_move(team_${this.color}, action)
           except GameEndException as end:
-              print(str(end))
-              endException = end
+              traceback.print_exception(end)
+              gameEndException = end
           except Exception as err:
-              print(str(err))
+              traceback.print_exception(err)
               team_${this.color}.use_lives()
 
-      endException
+      gameEndException
     `,
       { globals: this.globals, locals: pyodide.globals },
     );
-    const lives_after = pyodide.runPython(`team_${this.color}.get_lives()`);
-    if (lives_after < lives_before) {
-      console.log(`${this.color} lost a live (${lives_after} left)`);
+
+    const livesAfter = pyodide.runPython(`team_${this.color}.get_lives()`);
+    if (livesAfter < livesBefore) {
+      console.log(`${this.color} lost a live (${livesAfter} left)`);
     } else {
-      white_next = !white_next;
+      gameController.whiteNext = !gameController.whiteNext;
+      gameController.piecesHistory.push(
+        JSON.parse(pyodide.runPython(`tak_controller.tak.board.pieces_json()`)),
+      );
+      gameController.historyCursor = gameController.piecesHistory.length - 1;
     }
-    if (endException != undefined) {
-      endGame(endException);
+
+    if (exceptionProxy != undefined) {
+      gameController.gameEndException = new GameEndException(exceptionProxy);
     }
+
     this.updateClockDisplay();
   }
 
@@ -118,38 +141,18 @@ class Player {
   }
 }
 
-function endGame(endException) {
-  let winnerColor;
-  if (endException.winning_team != undefined) {
-    winnerColor = endException.winning_team.get_color();
-  }
-  let loserColor;
-  if (endException.losing_team != undefined) {
-    loserColor = endException.losing_team.get_color();
-  }
-  console.log(
-    `game ended (winner: ${winnerColor}, looser: ${loserColor}, draw: ${endException.draw})`,
-  );
-  endException.destroy();
-  gameState = "finished";
-}
-
 function dropHandlerWhite(event) {
   event.preventDefault();
 
-  if (gameState != "loading") {
-    const file = event.dataTransfer.files[0];
-    player_white.loadScript(file);
-  }
+  const file = event.dataTransfer.files[0];
+  gameController.playerWhite.loadScript(file);
 }
 
 function dropHandlerBlack(event) {
   event.preventDefault();
 
-  if (gameState != "loading") {
-    const file = event.dataTransfer.files[0];
-    player_black.loadScript(file);
-  }
+  const file = event.dataTransfer.files[0];
+  gameController.playerBlack.loadScript(file);
 }
 
 function dragOverHandler(event) {
@@ -157,84 +160,103 @@ function dragOverHandler(event) {
 }
 
 function onkeydownHandler(event) {
-  if (event.key === " " && player_white.globals && player_black.globals) {
-    if (gameState === "ready") {
-      console.log("start bots");
-      player_black.start();
-      player_white.start();
-      gameState = "playing";
-    } else if (gameState === "playing") {
-      if (white_next) {
-        player_white.step();
-      } else {
-        player_black.step();
-      }
-
-      pieces = JSON.parse(
-        pyodide.runPython(`tak_controller.tak.board.pieces_json()`),
-      );
-    }
+  if (event.key === " " && gameController.gameEndException == undefined) {
+    gameController.step();
   } else if (event.key === "r") {
-    reset();
-    gameState = "ready";
+    gameController.reset();
+  } else if (event.key === "ArrowLeft" && gameController.historyCursor > 0) {
+    gameController.historyCursor -= 1;
+  } else if (
+    event.key === "ArrowRight" &&
+    gameController.historyCursor < gameController.piecesHistory.length - 1
+  ) {
+    gameController.historyCursor += 1;
   }
 }
 
-function reset(board_size = 5, lives = 3, time = 120) {
-  pieces = [];
-  globalThis.board_size = board_size;
-  pyodide.runPython(`
-    team_white = Team("white", ${board_size}, ${lives}, ${time})
-    team_black = Team("black", ${board_size}, ${lives}, ${time})
+class GameEndException {
+  constructor(exceptionProxy) {
+    // ACHTUNG: möglicher memory leak
+    // if (exceptionProxy.winning_team != undefined) {
+    //   this.winnerColor = exceptionProxy.winning_team.get_color();
+    // }
+    // if (exceptionProxy.losing_team != undefined) {
+    //   this.loserColor = exceptionProxy.losing_team.get_color();
+    // }
+    // this.draw = exceptionProxy.draw;
 
-    tak_controller = TakController(team_white, team_black, board_size=${board_size})
-`);
-  white_next = false;
-  document.getElementById("script_output_black").innerText = "";
-  document.getElementById("script_output_white").innerText = "";
-  console.log(`reset board`);
+    console.log("game ended");
+    exceptionProxy.destroy();
+  }
 }
 
-let player_black;
-let player_white;
+class GameController {
+  constructor() {
+    document.getElementById("drop_zone_black").innerText = "";
+    document.getElementById("drop_zone_white").innerText = "";
 
-let white_next;
+    this.playerBlack = new Player("black");
+    this.playerWhite = new Player("white");
+  }
+
+  reset(boardSize = 5, lives = 3, time = 120, whiteNext = false) {
+    console.log("reset game");
+
+    this.gameEndException = undefined;
+    this.piecesHistory = [[]];
+    this.historyCursor = 0;
+    this.boardSize = boardSize;
+    this.whiteNext = whiteNext;
+
+    pyodide.runPython(`
+      team_white = Team("white", ${boardSize}, ${lives}, ${time})
+      team_black = Team("black", ${boardSize}, ${lives}, ${time})
+
+      tak_controller = TakController(team_white, team_black, board_size=${boardSize})
+    `);
+
+    document.getElementById("script_output_black").innerText = "";
+    document.getElementById("script_output_white").innerText = "";
+
+    this.playerBlack.start();
+    this.playerWhite.start();
+  }
+
+  step() {
+    if (this.whiteNext) {
+      this.playerWhite.step();
+    } else {
+      this.playerBlack.step();
+    }
+  }
+}
 
 let pyodide;
 
-let pieces = [];
-let board_size = 5;
+let gameController;
 
-// loading, ready, playing, finished
-let gameState = "loading";
-
-function setup() {
-  player_black = new Player("black");
-  player_white = new Player("white");
-
-  loadPyodide()
-    .then((p) => {
-      pyodide = p;
-      const gameLogicBinary = Uint8Array.fromBase64(GAME_LOGIC);
-      pyodide.unpackArchive(gameLogicBinary, "tar");
-      return pyodide.loadPackage("numpy");
-    })
-    .then((np) => {
-      pyodide.runPython(`
-        from Team import *
-        from Tak import *
-        from TakController import *
-      `);
-      document.getElementById("drop_zone_black").innerText = "";
-      document.getElementById("drop_zone_white").innerText = "";
-      console.log("pyodide ready");
-      reset();
-      gameState = "ready";
-    });
-
-  let canvas = document.getElementById("canvas");
-  createCanvas(700, 700, WEBGL, canvas);
+async function setup() {
+  const canvas = createCanvas(700, 700, WEBGL);
+  canvas.addClass("accent_border");
   angleMode(DEGREES);
+
+  pyodide = await loadPyodide();
+  const gameLogicBinary = Uint8Array.fromBase64(GAME_LOGIC);
+  pyodide.unpackArchive(gameLogicBinary, "tar");
+  await pyodide.loadPackage("numpy");
+
+  pyodide.runPython(`
+    from Team import *
+    from Tak import *
+    from TakController import *
+
+    import time
+    import traceback
+  `);
+  console.log("pyodide ready");
+
+  gameController = new GameController();
+  gameController.reset();
 }
 
 function draw() {
@@ -248,16 +270,16 @@ function draw() {
   orbitControl();
 
   translate(
-    -((board_size - 1) * TILE_WIDTH) / 2,
+    -((gameController.boardSize - 1) * TILE_WIDTH) / 2,
     0,
-    -((board_size - 1) * TILE_WIDTH) / 2,
+    -((gameController.boardSize - 1) * TILE_WIDTH) / 2,
   );
 
   push();
   fill("#E6C453");
   stroke("#67520F");
-  for (let i = 0; i < board_size; i++) {
-    for (let j = 0; j < board_size; j++) {
+  for (let i = 0; i < gameController.boardSize; i++) {
+    for (let j = 0; j < gameController.boardSize; j++) {
       push();
       translate(j * TILE_WIDTH, 50, i * TILE_WIDTH);
       box(TILE_WIDTH, 100, TILE_WIDTH);
@@ -266,7 +288,9 @@ function draw() {
   }
   pop();
 
-  for (const piece of pieces) {
+  for (const piece of gameController.piecesHistory[
+    gameController.historyCursor
+  ]) {
     push();
     if (piece.kind == "stone") {
       stroke("#777");
