@@ -259,7 +259,7 @@ function draw() {
   for (let i = 0; i < board_size; i++) {
     for (let j = 0; j < board_size; j++) {
       push();
-      translate(i * TILE_WIDTH, 50, j * TILE_WIDTH);
+      translate(j * TILE_WIDTH, 50, i * TILE_WIDTH);
       box(TILE_WIDTH, 100, TILE_WIDTH);
       pop();
     }
@@ -271,18 +271,18 @@ function draw() {
     if (piece.kind == "stone") {
       stroke("#777");
       translate(
-        piece.pos[0] * TILE_WIDTH,
-        -(piece.pos[2] * STONE_HEIGHT + STONE_HEIGHT / 2),
         piece.pos[1] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_HEIGHT / 2),
+        piece.pos[0] * TILE_WIDTH,
       );
       fill(piece.color);
       box(STONE_WIDTH, STONE_HEIGHT, STONE_WIDTH);
     } else if (piece.kind == "wall") {
       stroke("#777");
       translate(
-        piece.pos[0] * TILE_WIDTH,
-        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
         piece.pos[1] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
+        piece.pos[0] * TILE_WIDTH,
       );
       fill(piece.color);
       rotateY(45);
@@ -290,9 +290,9 @@ function draw() {
     } else {
       noStroke();
       translate(
-        piece.pos[0] * TILE_WIDTH,
-        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
         piece.pos[1] * TILE_WIDTH,
+        -(piece.pos[2] * STONE_HEIGHT + STONE_WIDTH / 2),
+        piece.pos[0] * TILE_WIDTH,
       );
       fill(piece.color);
       cylinder(CAPSTONE_RADIUS, STONE_WIDTH);
