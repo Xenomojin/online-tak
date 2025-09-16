@@ -194,8 +194,8 @@ function onkeydownHandler(event) {
 class GameEndException {
   constructor(exceptionProxy) {
     this.message = exceptionProxy.toString();
-    console.log(message);
-    alert(message);
+    console.log(this.message);
+    alert(this.message);
     exceptionProxy.destroy();
   }
 }
