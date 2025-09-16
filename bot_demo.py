@@ -22,15 +22,16 @@ def step(board):
 
     print("board size:", board.board_size())
 
-    move = None
-    for i in range(board.board_size()):
-        for j in range(board.board_size()):
-            if not board[i, j]:
-                if random() > 0.3:
-                    move = f"PS;({i},{j})"
-                else:
-                    move = f"PW;({i},{j})"
+    def find_move():
+        for i in range(board.board_size()):
+            for j in range(board.board_size()):
+                if not board[i, j]:
+                    if random() > 0.3:
+                        return f"PS;({i},{j})"
+                    else:
+                        return f"PW;({i},{j})"
 
+    move = find_move()
     if move is None:
         print("found no empty tile :(")
     else:

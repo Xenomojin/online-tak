@@ -22,7 +22,10 @@ class Player {
     reader.onload = (event) => {
       this.dropZone.innerText = file.name;
       this.globals = pyodide.globals.get("dict")();
-      pyodide.runPython(event.target.result, { globals: this.globals });
+      pyodide.runPython(event.target.result, {
+        globals: this.globals,
+        filename: this.dropZone.innerText,
+      });
       this.start();
     };
     console.log(`loading script "${file.name}" for ${this.color}`);
@@ -31,12 +34,17 @@ class Player {
 
   captureOutput() {
     pyodide.setStdout({
-      batched: (message) => (this.outputConsole.innerHTML += message + "<br>"),
+      batched: (message) => {
+        this.outputConsole.innerHTML += message + "<br>";
+        this.outputConsole.scrollTop = this.outputConsole.scrollHeight;
+      },
     });
     pyodide.setStderr({
-      batched: (message) =>
-        (this.outputConsole.innerHTML +=
-          '<span class="error">' + message + "</span><br>"),
+      batched: (message) => {
+        this.outputConsole.innerHTML +=
+          '<span class="error">' + message + "</span><br>";
+        this.outputConsole.scrollTop = this.outputConsole.scrollHeight;
+      },
     });
   }
 
@@ -61,7 +69,11 @@ class Player {
 
         team_${this.color}.use_time(time.time() - before)
       `,
-      { globals: this.globals, locals: pyodide.globals },
+      {
+        globals: this.globals,
+        locals: pyodide.globals,
+        filename: this.dropZone.innerText,
+      },
     );
 
     this.updateClockDisplay();
@@ -105,7 +117,11 @@ class Player {
 
       gameEndException
     `,
-      { globals: this.globals, locals: pyodide.globals },
+      {
+        globals: this.globals,
+        locals: pyodide.globals,
+        filename: this.dropZone.innerText,
+      },
     );
 
     const livesAfter = pyodide.runPython(`team_${this.color}.get_lives()`);
