@@ -103,13 +103,14 @@ class Player {
 
       team_${this.color}.use_time(time.time() - before)
 
-      if team_${this.color}.get_lives() <= 0 or team_${this.color}.get_time() <= 0:
-          gameEndException = GameEndException(losing_team=team_${this.color}, winning_team=team_${this.colorOpponent})
+      if team_${this.color}.get_lives() <= 0:
+          gameEndException = GameEndException(winning_team=team_${this.colorOpponent}, cause="No lives left")
+      elif team_${this.color}.get_time() <= 0:
+          gameEndException = GameEndException(winning_team=team_${this.colorOpponent}, cause="Out of time")
       elif action is not None:
           try:
               tak_controller.next_move(team_${this.color}, action)
           except GameEndException as end:
-              traceback.print_exception(end)
               gameEndException = end
           except Exception as err:
               traceback.print_exception(err)
@@ -192,16 +193,9 @@ function onkeydownHandler(event) {
 
 class GameEndException {
   constructor(exceptionProxy) {
-    // ACHTUNG: möglicher memory leak
-    // if (exceptionProxy.winning_team != undefined) {
-    //   this.winnerColor = exceptionProxy.winning_team.get_color();
-    // }
-    // if (exceptionProxy.losing_team != undefined) {
-    //   this.loserColor = exceptionProxy.losing_team.get_color();
-    // }
-    // this.draw = exceptionProxy.draw;
-
-    console.log("game ended");
+    this.message = exceptionProxy.toString();
+    console.log(message);
+    alert(message);
     exceptionProxy.destroy();
   }
 }

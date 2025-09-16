@@ -2,12 +2,15 @@ from Team import Team
 import json
 
 class GameEndException(Exception):
-    def __init__(self, losing_team=None, winning_team=None, draw=None):
-        assert losing_team or winning_team or draw
-        assert draw != (losing_team or winning_team)
-        self.losing_team = losing_team
+    def __init__(self, winning_team, cause=None):
         self.winning_team = winning_team
-        self.draw = draw
+        self.cause = cause
+
+    def __str__(self):
+        if self.winning_team is None:
+            return f"It's a draw: {self.cause}"
+        else:
+            return f"Team {self.winning_team.get_color()} wins: {self.cause}"
 
 class Piece:
     def __init__(self, team, kind):
@@ -186,13 +189,21 @@ class Tak:
                 else:
                     black += 1
 
-        if not self.team_white.has_piece() or not self.team_black.has_piece() or filled >= self.board_size ** 2:
+        if not self.team_white.has_piece() or not self.team_black.has_piece():
             if white > black:
-                raise GameEndException(winning_team=white, losing_team=black)
+                raise GameEndException(winning_team=self.team_white, cause="No pieces left")
             elif black > white:
-                raise GameEndException(winning_team=black, losing_team=white)
+                raise GameEndException(winning_team=self.team_black, cause="No pieces left")
             else:
-                raise GameEndException(draw=True)
+                raise GameEndException(winning_team=None, cause="No pieces left")
+
+        if filled >= self.board_size ** 2:
+            if white > black:
+                raise GameEndException(winning_team=self.team_white, cause="Board is filled")
+            elif black > white:
+                raise GameEndException(winning_team=self.team_black, cause="Board is filled")
+            else:
+                raise GameEndException(winning_team=None, cause="Board is filled")
 
         # Die Implementierung ist in O(n^3), ich weiß, das es besser geht
         board = self.board.copy()  # Damit ich nicht in dem Echten spielbrett tags setze
@@ -235,8 +246,8 @@ class Tak:
                     black_winning = True
 
         if white_winning and black_winning:
-            raise GameEndException(winning_team=team)
+            raise GameEndException(winning_team=team, cause="Achieved a road")
         elif white_winning:
-            raise GameEndException(winning_team=self.team_white, losing_team=self.team_black)
+            raise GameEndException(winning_team=self.team_white, cause="Achieved a road")
         elif black_winning:
-            raise GameEndException(winning_team=self.team_black, losing_team=self.team_white)
+            raise GameEndException(winning_team=self.team_black, cause="Achieved a road")
