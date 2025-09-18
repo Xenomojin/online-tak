@@ -49,57 +49,67 @@ class GameController {
       return;
     }
 
+    let success;
     if (this.whiteNext) {
-      this.gameEndException = this.playerWhite.step();
+      success = this.playerWhite.step();
     } else {
-      this.gameEndException = this.playerBlack.step();
+      success = this.playerBlack.step();
     }
 
-    this.whiteNext = !this.whiteNext;
-    this.updateActivePlayer();
-    this.piecesHistory.push(
-      JSON.parse(pyodide.runPython(`tak_controller.tak.board.pieces_json()`)),
-    );
-    this.historyCursor = this.piecesHistory.length - 1;
+    if (success) {
+      if (this.gameEndException == undefined) {
+        this.whiteNext = !this.whiteNext;
+        this.updateActivePlayer();
+      }
 
-    const newPieces = this.piecesHistory[this.historyCursor];
-    if (this.historyCursor >= 1) {
-      const oldPieces = this.piecesHistory[this.historyCursor - 1];
+      this.piecesHistory.push(
+        JSON.parse(pyodide.runPython(`tak_controller.tak.board.pieces_json()`)),
+      );
+      this.historyCursor = this.piecesHistory.length - 1;
 
-      for (const newPiece of newPieces) {
-        let newPieceIsAddition = true;
-        for (const oldPiece of oldPieces) {
-          if (
-            newPiece.kind == oldPiece.kind &&
-            newPiece.color == oldPiece.color &&
-            newPiece.pos[0] == oldPiece.pos[0] &&
-            newPiece.pos[1] == oldPiece.pos[1] &&
-            newPiece.pos[2] == oldPiece.pos[2]
-          ) {
-            newPieceIsAddition = false;
-            break;
+      const newPieces = this.piecesHistory[this.historyCursor];
+      if (this.historyCursor >= 1) {
+        const oldPieces = this.piecesHistory[this.historyCursor - 1];
+
+        for (const newPiece of newPieces) {
+          let newPieceIsAddition = true;
+          for (const oldPiece of oldPieces) {
+            if (
+              newPiece.kind == oldPiece.kind &&
+              newPiece.color == oldPiece.color &&
+              newPiece.pos[0] == oldPiece.pos[0] &&
+              newPiece.pos[1] == oldPiece.pos[1] &&
+              newPiece.pos[2] == oldPiece.pos[2]
+            ) {
+              newPieceIsAddition = false;
+              break;
+            }
+          }
+          if (newPieceIsAddition) {
+            newPiece.outline = "#e66149";
+          } else {
+            newPiece.outline = "#777";
           }
         }
-        if (newPieceIsAddition) {
-          newPiece.outline = "#c94f08";
-        } else {
+      } else {
+        for (const newPiece of newPieces) {
           newPiece.outline = "#777";
         }
-      }
-    } else {
-      for (const newPiece of newPieces) {
-        newPiece.outline = "#777";
       }
     }
   }
 
+  endGame(gameEndExceptionProxy) {
+    this.gameEndException = new GameEndException(exceptionProxy);
+  }
+
   updateActivePlayer() {
     if (this.whiteNext) {
-      this.playerWhite.setActive();
-      this.playerBlack.setInactive();
+      this.playerWhite.clockDisplay.classList.add("active");
+      this.playerBlack.clockDisplay.classList.remove("active");
     } else {
-      this.playerBlack.setActive();
-      this.playerWhite.setInactive();
+      this.playerBlack.clockDisplay.classList.add("active");
+      this.playerWhite.clockDisplay.classList.remove("active");
     }
   }
 }

@@ -82,7 +82,7 @@ class Player {
   step() {
     if (this.globals == undefined) {
       console.log(`can't run step: ${this.color} has no script attached`);
-      return;
+      return false;
     }
 
     this.captureOutput();
@@ -125,43 +125,36 @@ class Player {
       },
     );
 
-    const livesAfter = pyodide.runPython(`team_${this.color}.get_lives()`);
-    if (livesAfter < livesBefore) {
-      console.log(`${this.color} lost a live (${livesAfter} left)`);
-    }
-
     this.updateClockDisplay();
 
     if (exceptionProxy != undefined) {
-      return new GameEndException(exceptionProxy);
+      gameController.gameEndException = new GameEndException(exceptionProxy);
+    }
+
+    const livesAfter = pyodide.runPython(`team_${this.color}.get_lives()`);
+    if (livesAfter < livesBefore) {
+      console.log(`${this.color} lost a live (${livesAfter} left)`);
+      return false;
     } else {
-      return undefined;
+      return true;
     }
   }
 
   updateClockDisplay() {
     const seconds = pyodide.runPython(`team_${this.color}.get_time()`);
 
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    const hundredths = Math.floor((seconds % 1) * 100);
+    if (seconds < 6000) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60);
+      const hundredths = Math.floor((seconds % 1) * 100);
 
-    const formattedMinutes = minutes.toString().padStart(2, "0");
-    const formattedSeconds = remainingSeconds.toString().padStart(2, "0");
-    const formattedHundredths = hundredths.toString().padStart(2, "0");
+      const formattedMinutes = minutes.toString().padStart(2, "0");
+      const formattedSeconds = remainingSeconds.toString().padStart(2, "0");
+      const formattedHundredths = hundredths.toString().padStart(2, "0");
 
-    this.clockDisplay.innerText = `${formattedMinutes}:${formattedSeconds}.${formattedHundredths}`;
-  }
-
-  setActive() {
-    this.clockDisplay.classList.toggle("active");
-    this.outputConsole.classList.toggle("active");
-    this.dropZone.classList.toggle("active");
-  }
-
-  setInactive() {
-    this.clockDisplay.classList.remove("active");
-    this.outputConsole.classList.remove("active");
-    this.dropZone.classList.remove("active");
+      this.clockDisplay.innerText = `${formattedMinutes}:${formattedSeconds}.${formattedHundredths}`;
+    } else {
+      this.clockDisplay.innerText = `>99:59.99`;
+    }
   }
 }
