@@ -8,6 +8,8 @@ class Player {
     }
     this.clockDisplay = document.getElementById("clock_" + color);
     this.outputConsole = document.getElementById("script_output_" + color);
+    this.stonesDisplay = document.getElementById("stones_" + color);
+    this.capstonesDisplay = document.getElementById("capstones_" + color);
     this.dropZone = document.getElementById("drop_zone_" + color);
   }
 
@@ -76,7 +78,7 @@ class Player {
       },
     );
 
-    this.updateClockDisplay();
+    this.updateDisplays();
   }
 
   step() {
@@ -125,7 +127,7 @@ class Player {
       },
     );
 
-    this.updateClockDisplay();
+    this.updateDisplays();
 
     if (exceptionProxy != undefined) {
       gameController.gameEndException = new GameEndException(exceptionProxy);
@@ -140,7 +142,7 @@ class Player {
     }
   }
 
-  updateClockDisplay() {
+  updateDisplays() {
     const seconds = pyodide.runPython(`team_${this.color}.get_time()`);
 
     if (seconds < 6000) {
@@ -156,5 +158,11 @@ class Player {
     } else {
       this.clockDisplay.innerText = `>99:59.99`;
     }
+
+    const stones = pyodide.runPython(`team_${this.color}.get_stones()`);
+    const capstones = pyodide.runPython(`team_${this.color}.get_capstone()`);
+
+    this.stonesDisplay.innerText = stones;
+    this.capstonesDisplay.innerText = capstones;
   }
 }

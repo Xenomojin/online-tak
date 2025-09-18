@@ -14,13 +14,19 @@
 
     <body onkeydown="onkeydownHandler(event)">
         <div id="control_bar">
-            <div
-                id="drop_zone_black"
-                ondrop="dropHandlerBlack(event)"
-                ondragover="dragOverHandler(event)"
-                class="accent_border"
-            >
-                loading...
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div
+                    id="drop_zone_black"
+                    ondrop="dropHandlerBlack(event)"
+                    ondragover="dragOverHandler(event)"
+                    class="accent_border"
+                >
+                    loading...
+                </div>
+                <div style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+                    <div id="stones_black" class="accent_border"></div> <img src="stone_black.svg" height="25px"/>
+                    <div id="capstones_black" class="accent_border"></div> <img src="capstone_black.svg" height="30px"/>
+                </div>
             </div>
             <div id="clock_black" class="accent_border"></div>
             <h1>Tak
@@ -34,13 +40,19 @@
                 </a>
             </h1>
             <div id="clock_white" class="accent_border"></div>
-            <div
-                id="drop_zone_white"
-                ondrop="dropHandlerWhite(event)"
-                ondragover="dragOverHandler(event)"
-                class="accent_border"
-            >
-                loading...
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div
+                    id="drop_zone_white"
+                    ondrop="dropHandlerWhite(event)"
+                    ondragover="dragOverHandler(event)"
+                    class="accent_border"
+                >
+                    loading...
+                </div>
+                <div style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+                    <div id="stones_white" class="accent_border"></div> <img src="stone_white.svg" height="25px"/>
+                    <div id="capstones_white" class="accent_border"></div> <img src="capstone_white.svg" height="30px"/>
+                </div>
             </div>
         </div>
         <div id="content">

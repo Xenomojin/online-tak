@@ -37,8 +37,8 @@ class GameController {
 
     this.playerBlack.start();
     this.playerWhite.start();
-    this.playerBlack.updateClockDisplay();
-    this.playerWhite.updateClockDisplay();
+    this.playerBlack.updateDisplays();
+    this.playerWhite.updateDisplays();
 
     this.updateActivePlayer();
   }

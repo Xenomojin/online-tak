@@ -4,7 +4,7 @@ function draw() {
   const STONE_HEIGHT = 20;
   const CAPSTONE_RADIUS = 25;
 
-  background("#D4FFF7");
+  background("#d4fff7");
 
   orbitControl();
 
@@ -15,16 +15,27 @@ function draw() {
   );
 
   push();
-  fill("#E6C453");
-  stroke("#67520F");
+  stroke("#67520f");
   for (let i = 0; i < gameController.boardSize; i++) {
     for (let j = 0; j < gameController.boardSize; j++) {
+      if ((i + j) % 2 == 0) {
+        fill("#e6c453");
+      } else {
+        fill("#dfb320");
+      }
       push();
       translate(j * TILE_WIDTH, 50, i * TILE_WIDTH);
       box(TILE_WIDTH, 100, TILE_WIDTH);
       pop();
     }
   }
+  pop();
+
+  push();
+  noStroke();
+  fill("#9cf788");
+  translate(-TILE_WIDTH / 2, 0, -TILE_WIDTH / 2);
+  sphere(4, 4, 4);
   pop();
 
   for (const piece of gameController.piecesHistory[
